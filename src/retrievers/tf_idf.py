@@ -104,7 +104,6 @@ class TFIDF(Retriever):
         n_terms = len(self.corpus_vocabulary)
         tfidf_matrix = lil_matrix((n_documents, n_terms), dtype=np.float32)
 
-        # TODO: Add tf-idf code
         IDF_dict = self.idf
         for row, document in enumerate(self.index.GetDocuments()):
             term_counts_dict = self.GetDocumentTermCounts(document)
@@ -115,7 +114,6 @@ class TFIDF(Retriever):
                 IDF_term = IDF_dict[term]
 
                 TF_IDF_term = TF_term * IDF_term
-                #TODO: put it in the matrix
                 tfidf_matrix[row, self.term_to_index[term]] = TF_IDF_term
 
         return tfidf_matrix.tocsr()   # Convert to CSR format for efficient row slicing
@@ -130,8 +128,6 @@ class TFIDF(Retriever):
             csr_matrix: A sparse vector representation of the query
         """
         query_vector = lil_matrix((len(queries), len(self.corpus_vocabulary)), dtype=np.float32)
-        print(f"Query vector shape: {query_vector.shape, query_vector.toarray()}")
-        # TODO: add code
         for idx, query in enumerate(queries):
             for term in self.PreprocessText(query):
                 if term in self.term_to_index:
