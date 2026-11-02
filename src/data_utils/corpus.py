@@ -19,6 +19,9 @@ class Corpus:
             shutil.rmtree(f'{base_dir}/raw')
         else:
             self.ds = load_from_disk(f'{base_dir}/{self.dataset_name}')
+            self.relevant_ids = {qid: doc_ids
+                                 for split in self.ds.values()
+                                 for qid, doc_ids in zip(split['query_id'], split['document_id'])}
 
 
     @property

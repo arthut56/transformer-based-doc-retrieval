@@ -58,8 +58,9 @@ class TFIDF(Retriever):
         Returns a dict with terms and counts of how many documents the term occurs in (counted once per document).
         """
         document_frequencies = {}
-        for term in self.corpus_vocabulary:
-            document_frequencies[term] = sum(1 for document in self.index.GetDocuments() if term in self.GetDocumentVocabulary(document))
+        for document in self.index.GetDocuments():
+            for term in self.GetDocumentVocabulary(document):
+                document_frequencies[term] = document_frequencies.get(term, 0) + 1
         return document_frequencies
 
     
@@ -104,7 +105,7 @@ class TFIDF(Retriever):
         tfidf_matrix = lil_matrix((n_documents, n_terms), dtype=np.float32)
 
         # TODO: Add tf-idf code
-        IDF_dict = self.GetInverseDocumentFrequencies()
+        IDF_dict = self.idf
         for row, document in enumerate(self.index.GetDocuments()):
             term_counts_dict = self.GetDocumentTermCounts(document)
             for term in term_counts_dict:
@@ -116,7 +117,6 @@ class TFIDF(Retriever):
                 TF_IDF_term = TF_term * IDF_term
                 #TODO: put it in the matrix
                 tfidf_matrix[row, self.term_to_index[term]] = TF_IDF_term
-        print(tfidf_matrix.tocsr())
 
         return tfidf_matrix.tocsr()   # Convert to CSR format for efficient row slicing
     
