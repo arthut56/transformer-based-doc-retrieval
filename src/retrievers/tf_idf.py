@@ -41,8 +41,10 @@ class TFIDF(Retriever):
         """
         Returns all unique words in a document
         """
-        raise NotImplementedError()
-    
+
+        #Careful responsibilities
+        return self.GetQueryVocabulary(document.GetText())
+
     def GetCorpusVocabulary(self) -> set[str]:
         """
         Returns all unique words in ALL documents.
