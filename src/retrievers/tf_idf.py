@@ -68,14 +68,29 @@ class TFIDF(Retriever):
         """
         Returns a dict with terms and their corresponding inverse document frequencies.
         """
-        raise NotImplementedError()
+        N = len(self.index.GetDocuments())
+        doc_freq = self.GetDocumentFrequencies()
+
+        inv_document_frequencies = {}
+        for term in self.corpus_vocabulary:
+            inv_document_frequencies[term] = np.log(N/doc_freq[term])
+        return inv_document_frequencies
     
     
     def GetDocumentTermCounts(self, document: Document):
         """
         Returns a dict on the form {term: num_occurences} for an input Document.
         """
-        raise NotImplementedError()
+        document_vocab = self.GetDocumentVocabulary(document)
+        wordlist = self.PreprocessText(document.GetText())
+
+        term_counts = {}
+        for term in document_vocab:
+            term_counts[term] = 0
+            for word in wordlist:
+                if word == term:
+                    term_counts[term] += 1
+        return term_counts
 
     def GetDocumentsTFIDFVectors(self):
         """
