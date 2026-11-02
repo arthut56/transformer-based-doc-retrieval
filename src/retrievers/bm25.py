@@ -1,6 +1,5 @@
 from scipy.sparse import lil_matrix
 from src.retrievers.tf_idf import TFIDF
-from src.data_utils.document import Document
 import numpy as np
 
 class BM25(TFIDF):
@@ -8,7 +7,9 @@ class BM25(TFIDF):
         super(BM25, self).__init__(documents, index_path)
         self.k1 = k1
         self.b = b
-    
+
+        self.bm25_matrix = self.GetDocumentsTFIDFVectors()
+
     def GetDocumentLengths(self):
         document_lengths = {}
         average_document_length = 0
@@ -18,8 +19,6 @@ class BM25(TFIDF):
             average_document_length += length
         return document_lengths, average_document_length/len(self.index.GetDocuments())
     
-    # TODO: Add methods for computing self.bm25_matrix
-
     def GetInverseDocumentFrequencies(self) -> dict[str, float]:
         """
         Returns a dict with terms and their corresponding inverse document frequencies.
@@ -32,6 +31,35 @@ class BM25(TFIDF):
             inv_document_frequencies[term] = np.log(N/(doc_freq[term]+0.5))
         return inv_document_frequencies
 
+    def GetDocumentsTFIDFVectors(self):
+        """
+        Returns a n_documents x n_terms matrix whose element (i, j) is the td-idf score of the j'th term in the i'th document.
+        """
+        # Create a mapping from terms to indices
+        self.term_to_index = {term: idx for idx, term in enumerate(self.corpus_vocabulary)}
+
+        # Initialize a sparse matrix
+        n_documents = len(self.index.GetDocuments()) # N
+        n_terms = len(self.corpus_vocabulary)
+        bm25_matrix = lil_matrix((n_documents, n_terms), dtype=np.float32)
+
+        doc_lengths, d_avg = self.GetDocumentLengths()
+
+        IDF_dict = self.idf
+        for row, document in enumerate(self.index.GetDocuments()):
+            term_counts_dict = self.GetDocumentTermCounts(document)
+
+
+            for term in term_counts_dict:
+                specific_term_count = term_counts_dict[term]
+
+                TF_term = (specific_term_count * (self.k1 + 1)) / (specific_term_count + self.k1 * (1 - self.b + self.b * (doc_lengths[document] / d_avg)))
+                IDF_term = IDF_dict[term]
+
+                TF_IDF_term = TF_term * IDF_term
+                bm25_matrix[row, self.term_to_index[term]] = TF_IDF_term
+
+        return bm25_matrix.tocsr()   # Convert to CSR format for efficient row slicin
 
     def CalculateScores(self, queries: list[str]):
         """Calculate scores for a query
