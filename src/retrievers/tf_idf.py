@@ -2,7 +2,7 @@ from src.data_utils.document import Document
 from src.retrievers.base_retriever import Retriever
 import numpy as np
 from scipy.sparse import lil_matrix
-
+import rich
 
 class TFIDF(Retriever):
     def __init__(self, documents: list[dict] = None, index_path: str = None) -> None:
@@ -62,7 +62,7 @@ class TFIDF(Retriever):
         for term in self.corpus_vocabulary:
             document_frequencies[term] = sum(1 for document in self.index.GetDocuments() if term in self.GetDocumentVocabulary(document))
         return document_frequencies
-       
+
     
     def GetInverseDocumentFrequencies(self) -> dict[str, float]:
         """
@@ -75,8 +75,8 @@ class TFIDF(Retriever):
         for term in self.corpus_vocabulary:
             inv_document_frequencies[term] = np.log(N/doc_freq[term])
         return inv_document_frequencies
-    
-    
+
+
     def GetDocumentTermCounts(self, document: Document):
         """
         Returns a dict on the form {term: num_occurences} for an input Document.
@@ -105,7 +105,20 @@ class TFIDF(Retriever):
         tfidf_matrix = lil_matrix((n_documents, n_terms), dtype=np.float32)
 
         # TODO: Add tf-idf code
-        
+        IDF_dict = self.GetInverseDocumentFrequencies()
+        for row, document in enumerate(self.index.GetDocuments()):
+            term_counts_dict = self.GetDocumentTermCounts(document)
+            for term in term_counts_dict:
+                specific_term_count = term_counts_dict[term]
+
+                TF_term = specific_term_count / max(term_counts_dict.values())
+                IDF_term = IDF_dict[term]
+
+                TF_IDF_term = TF_term * IDF_term
+                #TODO: put it in the matrix
+                tfidf_matrix[row, self.term_to_index[term]] = TF_IDF_term
+        print(tfidf_matrix.toarray())
+
         return tfidf_matrix.tocsr()   # Convert to CSR format for efficient row slicing
     
     def QueryToVector(self, queries: list[str]):
