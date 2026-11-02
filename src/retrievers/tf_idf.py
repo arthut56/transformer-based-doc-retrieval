@@ -2,7 +2,6 @@ from src.data_utils.document import Document
 from src.retrievers.base_retriever import Retriever
 import numpy as np
 from scipy.sparse import lil_matrix
-import rich
 
 class TFIDF(Retriever):
     def __init__(self, documents: list[dict] = None, index_path: str = None) -> None:
@@ -117,7 +116,7 @@ class TFIDF(Retriever):
                 TF_IDF_term = TF_term * IDF_term
                 #TODO: put it in the matrix
                 tfidf_matrix[row, self.term_to_index[term]] = TF_IDF_term
-        print(tfidf_matrix.toarray())
+        print(tfidf_matrix.tocsr())
 
         return tfidf_matrix.tocsr()   # Convert to CSR format for efficient row slicing
     
@@ -131,10 +130,18 @@ class TFIDF(Retriever):
             csr_matrix: A sparse vector representation of the query
         """
         query_vector = lil_matrix((len(queries), len(self.corpus_vocabulary)), dtype=np.float32)
-
+        print(f"Query vector shape: {query_vector.shape, query_vector.toarray()}")
         # TODO: add code
-
+        for idx, query in enumerate(queries):
+            for term in self.PreprocessText(query):
+                if term in self.term_to_index:
+                    query_vector[idx, self.term_to_index[term]] += 1
         return query_vector.tocsr()
+            # go through all the words in the query
+            # for a specific word, find the total occurences and find its index in the corpus vocab.
+                #Idx row and idx of collumn.
+
+
 
     #@time_func
     def CalculateScores(self, queries: list[str]):
