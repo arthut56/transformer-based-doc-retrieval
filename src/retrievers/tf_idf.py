@@ -18,7 +18,9 @@ class TFIDF(Retriever):
         """
         Remove unwanted characters from text and lowercase
 
-        Edge case: e.g. "billionare-funded" -> "billionarefunded"
+        Edge cases:
+         "billionare-funded" -> "billionarefunded"
+         "they'll" -> "theyll"
         """
 
         text = "".join(character for character in text if character.isalnum() or character == " ")
@@ -30,7 +32,10 @@ class TFIDF(Retriever):
         """
         Returns all unique words in a query
         """
-        raise NotImplementedError()
+        sanitized_wordlist = self.PreprocessText(query)
+        unique_wordlist_as_set = set(sanitized_wordlist)
+
+        return list(unique_wordlist_as_set)
 
     def GetDocumentVocabulary(self, document: Document) -> list[str]:
         """
@@ -115,3 +120,4 @@ class TFIDF(Retriever):
         query_vectors = self.QueryToVector(queries) # n_queries x vocab size
         scores = query_vectors.dot(self.tfidf_matrix.T).toarray() # n_queries x n_documents
         return scores
+    
