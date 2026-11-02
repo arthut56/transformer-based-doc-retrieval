@@ -58,7 +58,10 @@ class TFIDF(Retriever):
         """
         Returns a dict with terms and counts of how many documents the term occurs in (counted once per document).
         """
-        raise NotImplementedError()
+        document_frequencies = {}
+        for term in self.corpus_vocabulary:
+            document_frequencies[term] = sum(1 for document in self.index.GetDocuments() if term in self.GetDocumentVocabulary(document))
+        return document_frequencies
        
     
     def GetInverseDocumentFrequencies(self) -> dict[str, float]:
