@@ -1,6 +1,7 @@
 from scipy.sparse import lil_matrix
 from src.retrievers.tf_idf import TFIDF
 from src.data_utils.document import Document
+import numpy as np
 
 class BM25(TFIDF):
     def __init__(self, documents: list[dict] = None, index_path: str = None, k1: float = 1.5, b: float = 0.75) -> None:
@@ -18,7 +19,20 @@ class BM25(TFIDF):
         return document_lengths, average_document_length/len(self.index.GetDocuments())
     
     # TODO: Add methods for computing self.bm25_matrix
-    
+
+    def GetInverseDocumentFrequencies(self) -> dict[str, float]:
+        """
+        Returns a dict with terms and their corresponding inverse document frequencies.
+        """
+        N = len(self.index.GetDocuments()) + 1
+        doc_freq = self.GetDocumentFrequencies()
+
+        inv_document_frequencies = {}
+        for term in self.corpus_vocabulary:
+            inv_document_frequencies[term] = np.log(N/(doc_freq[term]+0.5))
+        return inv_document_frequencies
+
+
     def CalculateScores(self, queries: list[str]):
         """Calculate scores for a query
         
