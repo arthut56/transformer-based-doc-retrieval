@@ -16,7 +16,7 @@ class TransformerEncoder(nn.Module):
         """
         Instantiate the model.
         """
-        self.model = None
+        self.model = TransformerEncoder(self.n_layers, self.n_heads, self.emb_dim, self.hidden_dim, self.feed_forward_dim)
         raise NotImplementedError()
 
     def pool(self, x):
