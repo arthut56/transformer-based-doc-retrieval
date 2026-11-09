@@ -17,6 +17,7 @@ class DPRLoss(nn.Module):
         Returns: A 1d torch tensor 
         """
 
+        #TODO: this needs testing
         scores = queries @ documents.T
 
         targets = torch.arange(queries.size(0), device=queries.device)
