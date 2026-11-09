@@ -63,4 +63,25 @@ class MultiHeadedAttention(nn.Module):
         return self.linears[-1](x)
 
 
+class FeedForward(nn.Module):
+    def __init__(self, d_model, d_ff, dropout=0.1):
+        super().__init__()
+        self.w_1 = nn.Linear(d_model, d_ff)
+        self.w_2 = nn.Linear(d_ff, d_model)
+        self.dropout = nn.Dropout(dropout)
+    def forward(self, x):
+        return self.w_2(self.dropout(F.relu(self.w_1(x))))
 
+
+class EncoderLayer(nn.Module):
+    def __init__(self, d_model, n_heads, d_ff, dropout=0.1):
+        super().__init__()
+        self.self_attn = MultiHeadedAttention(n_heads, d_model, dropout)
+        self.feed_forward = FeedForward(d_model, d_ff, dropout)
+        self.norm1 = nn.LayerNorm(d_model)
+        self.norm2 = nn.LayerNorm(d_model)
+        self.dropout = nn.Dropout(dropout)
+    def forward(self, x, mask):
+        x = self.norm1(x + self.dropout(self.self_attn(x, x, x, mask)))
+        x = self.norm2(x + self.dropout(self.feed_forward(x)))
+        return x
