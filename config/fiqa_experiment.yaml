@@ -13,3 +13,10 @@ top_k: 10
 hydra:
   run:
     dir: "outputs/${retriever.method}/"  # Separate directory for evaluation outputs
+
+train:
+  batch_size: 64
+  lr: 0.0003
+  weight_decay: 0.01
+  epochs: 30
+  save_dir: outputs/dpr
