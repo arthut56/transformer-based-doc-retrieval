@@ -8,6 +8,7 @@ defaults:
 device: auto
 base_path: "."
 top_k: 10
+do_train: false
 
 # Keep Hydra in the current directory to ensure relative paths are correct
 hydra:
