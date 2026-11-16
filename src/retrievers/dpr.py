@@ -11,7 +11,7 @@ class DPR(Retriever):
         self.device = get_device() if cfg.device == 'auto' else torch.device(cfg.device)
         self.tokenizer = AutoTokenizer.from_pretrained(cfg.model.tokenizer)
         self.query_encoder, self.document_encoder = self.__load_models()
-        self.document_embedding = self.build_document_embeddings()
+        self.document_embedding = None
 
     def tokenize(self, texts, max_length):
         return self.tokenizer(texts, padding=True, truncation=True,
@@ -27,7 +27,9 @@ class DPR(Retriever):
                                       n_layers=m.n_layers,n_heads=m.n_heads,
                                       emb_dim=m.emb_dim,
                                       hidden_dim=m.hidden_dim,
-                                      feed_forward_dim=m.feed_forward_dim)
+                                      feed_forward_dim=m.feed_forward_dim,
+                                      normalize=m.get('normalize', False),
+                                      norm_first=m.get('norm_first', False))
         query_encoder = build()
         document_encoder = build()
 
@@ -53,5 +55,7 @@ class DPR(Retriever):
         return self.encode(texts, self.document_encoder, self.cfg.model.doc_max_length)
 
     def CalculateScores(self, queries: list[str]):
+        if self.document_embedding is None:
+            self.document_embedding = self.build_document_embeddings()
         q = self.encode(queries, self.query_encoder, self.cfg.model.query_max_length)
         return (q@self.document_embedding.T).cpu()
