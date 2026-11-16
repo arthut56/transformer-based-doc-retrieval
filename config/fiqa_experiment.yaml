@@ -2,6 +2,7 @@ defaults:
   - _self_  # Hydra magic
   - dataset: fiqa
   - retriever: bm25
+  - model: bert-base-uncased
 
 
 device: cpu
