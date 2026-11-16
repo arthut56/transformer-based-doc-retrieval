@@ -44,12 +44,15 @@ def main(cfg):
             trainer = Trainer(retriever, cfg)
             loader = DataLoader(PairDataset(corpus.train), batch_size=cfg.train.batch_size,
                                 shuffle=True, drop_last=True)
+            val_loader = DataLoader(PairDataset(corpus.val), batch_size=cfg.train.batch_size, drop_last=True)
             for epoch in range(cfg.train.epochs):
-                print(epoch, trainer.train_epoch(loader))
+                train_loss = trainer.train_epoch(loader)
+                val_loss = trainer.eval_epoch(val_loader)
+                print(f'epoch {epoch}: train loss {train_loss:.4f} | val loss {val_loss:.4f}')
             trainer.save()
             retriever.query_encoder.eval()
             retriever.document_encoder.eval()
-            retriever.document_embedding = retriever.build_document_embeddings()
+            retriever.document_embedding = None  # stale after training; rebuilt on next lookup
     else:
         retriever = TFIDF(documents=corpus.all_documents)
 
