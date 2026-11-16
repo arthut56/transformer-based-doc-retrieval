@@ -7,6 +7,9 @@ from src.data_utils.query import Query
 from src.retrievers.utils import retrieveQueryAndGetRelevancies
 from src.evaluation.metrics import Evaluate
 from src.retrievers.dpr import DPR
+from torch.utils.data import DataLoader
+from src.training.trainer import Trainer, PairDataset
+
 @hydra.main(config_path='config', config_name='fiqa_experiment.yaml', version_base=None)
 def main(cfg):
     ### Load a dataset
@@ -37,6 +40,16 @@ def main(cfg):
         retriever = BM25(documents=corpus.all_documents)
     elif cfg.retriever.method == 'dpr':
         retriever = DPR(cfg, documents=corpus.all_documents)
+        if cfg.get('do_train', False):
+            trainer = Trainer(retriever, cfg)
+            loader = DataLoader(PairDataset(corpus.train), batch_size=cfg.train.batch_size,
+                                shuffle=True, drop_last=True)
+            for epoch in range(cfg.train.epochs):
+                print(epoch, trainer.train_epoch(loader))
+            trainer.save()
+            retriever.query_encoder.eval()
+            retriever.document_encoder.eval()
+            retriever.document_embedding = retriever.build_document_embeddings()
     else:
         retriever = TFIDF(documents=corpus.all_documents)
 
