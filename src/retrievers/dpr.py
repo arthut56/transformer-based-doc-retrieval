@@ -39,14 +39,14 @@ class DPR(Retriever):
         if document_weights_path:
             document_encoder.load_state_dict(torch.load(document_weights_path, map_location=self.device))
 
-        return query_encoder, document_encoder
-
+        return query_encoder.to(self.device).eval(), document_encoder.to(self.device).eval() ## can't just do return query_encoder, document encoder
+    @torch.no_grad()
     def encode(self, texts, encoder, max_length, batch_size = 64):
         out = []
         for i in range (0, len(texts), batch_size):
             ids = self.tokenize(texts[i:i+batch_size], max_length).to(self.device)
             out.append(encoder(ids))
-            return torch.cat(out)
+        return torch.cat(out)
 
     def build_document_embeddings(self):
         texts = [doc.GetText() for doc in self.index.GetDocuments()]
