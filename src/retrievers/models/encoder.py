@@ -7,7 +7,8 @@ import math
 
 class TransformerEncoder(nn.Module):
     def __init__(self, vocab_size: int, pad_id: int, pooling_type: str, dropout: float,
-                 n_layers: int, n_heads: int, emb_dim: int, hidden_dim: int, feed_forward_dim: int):
+                 n_layers: int, n_heads: int, emb_dim: int, hidden_dim: int, feed_forward_dim: int,
+                 normalize: bool = False, norm_first: bool = False):
         super().__init__()
         self.n_layers = n_layers
         self.n_heads = n_heads
@@ -19,6 +20,8 @@ class TransformerEncoder(nn.Module):
         self.pad_id = pad_id
         self.pooling_type = pooling_type
         self.dropout = dropout
+        self.normalize = normalize
+        self.norm_first = norm_first
 
         self.setup_model()
 
@@ -27,9 +30,14 @@ class TransformerEncoder(nn.Module):
         Instantiate the model.
         """
         self.token_embedding = nn.Embedding(self.vocab_size, self.emb_dim, padding_idx=self.pad_id)
+        nn.init.normal_(self.token_embedding.weight, std=self.emb_dim ** -0.5)
+        with torch.no_grad():
+            self.token_embedding.weight[self.pad_id].zero_()
         self.position_embedding = layers.PositionalEncoding(self.emb_dim, self.dropout)
         self.layers = nn.ModuleList([layers.EncoderLayer(self.emb_dim, self.n_heads,
-                                                         self.feed_forward_dim, self.dropout) for _ in range(self.n_layers)])
+                                                         self.feed_forward_dim, self.dropout,
+                                                         self.norm_first) for _ in range(self.n_layers)])
+        self.final_norm = nn.LayerNorm(self.emb_dim) if self.norm_first else nn.Identity()
         self.proj = nn.Linear(self.emb_dim, self.hidden_dim) #TODO: Compress dimensions, We could omit this in future testing to see if it improves performance or not
 
     def pool(self, x, mask):
@@ -59,7 +67,10 @@ class TransformerEncoder(nn.Module):
         x = self.position_embedding(x)
         for layer in self.layers:
             x = layer(x, mask)
+        x = self.final_norm(x)
         x = self.proj(self.pool(x, mask))
+        if self.normalize:
+            x = F.normalize(x, dim=-1)
         return x
 
     def attention_maps(self):
