@@ -2,7 +2,7 @@ import os
 import pickle
 from abc import ABC, abstractmethod
 from src.data_utils.dataset import DocumentDataset
-
+import torch
 class Retriever(ABC):
     def __init__(self, documents: list[dict] = None, index_path: str = None) -> None:
         if not index_path is None:
@@ -46,6 +46,8 @@ class Retriever(ABC):
         @param queries: The input text(s) to which relevant passages should be found.
         @param k: The number of relevant passages to retrieve for each input query.
         """
-        scores = self.CalculateScores(queries)
-        ranked_documents = [[d for _, d in sorted(zip(query_scores, self.index.GetDocuments()), key=lambda pair: pair[0], reverse=True)] for query_scores in scores]
-        return [ranked_document[:min(k, len(ranked_documents[0]))] for ranked_document in ranked_documents]
+        scores = torch.as_tensor(self.CalculateScores(queries))
+        k = min(k, scores.size(1))
+        top_idx = torch.topk(scores, k, dim=1).indices
+        docs = self.index.GetDocuments()
+        return [[docs[j] for j in row] for row in top_idx.tolist()]
