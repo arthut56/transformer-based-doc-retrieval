@@ -1,11 +1,11 @@
 defaults:
   - _self_  # Hydra magic
   - dataset: fiqa
-  - retriever: bm25
-  - model: bert-base-uncased
+  - retriever: dpr
+  - model: encoder
 
 
-device: cpu
+device: auto
 base_path: "."
 top_k: 10
 

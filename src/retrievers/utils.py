@@ -1,6 +1,6 @@
 from src.retrievers.base_retriever import Retriever
 from src.data_utils.query import Query
-
+import torch
 def retrieveQueryAndGetRelevancies(model: Retriever, queries: list[Query], k: int):
     """
     @param model: Retrieval model
@@ -21,3 +21,10 @@ def retrieveQueryAndGetRelevancies(model: Retriever, queries: list[Query], k: in
                 query_relevancies.append(False)
         relevancies.append(query_relevancies)
     return relevancies
+
+def get_device():
+    if torch.cuda.is_available():
+        return torch.device('cuda')
+    if hasattr(torch, 'xpu') and torch.xpu.is_available():
+        return torch.device('xpu')
+    return torch.device('cpu')

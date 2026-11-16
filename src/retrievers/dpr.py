@@ -6,7 +6,7 @@ class DPR:
     def __init__(self, cfg, documents = None, index_path = None):
         super().__init__(documents, index_path)
         self.cfg = cfg
-        self.device = cfg.device
+        self.device = cfg.device if cfg.device == 'auto' else torch.device(cfg.device)
         self.tokenizer = AutoTokenizer.from_pretrained(cfg.model.tokenizer)
         self.query_encoder, self.document_encoder = AutoModel.from_pretrained(cfg.model.encoder)
         self.document_embedding = self.build_document_embeddings()
@@ -38,3 +38,17 @@ class DPR:
         if self.cfg.model.get('query_encoder_weights_path', None):
             document_encoder.load_state_dict(document_weights_path)
 
+    def encode(self, texts, encoder, max_length, batch_size = 64):
+        out = []
+        for i in range (0, len(texts), batch_size):
+            ids = self.tokenize(texts[i:i+batch_size], max_length).to(self.device)
+            out.append(self.document_encoder(ids))
+            return torch.cat(out)
+
+    def build_document_embeddings(self):
+        texts = [doc.GetText() for doc in self.index.GetDocuments()]
+        return self.encode(texts, self.document_encoder, self.cfg.model.doc_max_length)
+
+    def CalculateScores(self, queries: list[str]):
+        q = self.encode(queries, self.query_encoder, self.cfg.model.doc_max_length)
+        return (q@self.document_embedding.T).cpu()
