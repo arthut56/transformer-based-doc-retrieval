@@ -63,3 +63,10 @@ class Trainer:
         os.makedirs(self.cfg.train.save_dir, exist_ok=True)
         torch.save(self.dpr.query_encoder.state_dict(), f'{self.cfg.train.save_dir}/query_encoder.pt')
         torch.save(self.dpr.document_encoder.state_dict(), f'{self.cfg.train.save_dir}/document_encoder.pt')
+
+    def load(self):
+        device = self.dpr.device
+        self.dpr.query_encoder.load_state_dict(
+            torch.load(f'{self.cfg.train.save_dir}/query_encoder.pt', map_location=device))
+        self.dpr.document_encoder.load_state_dict(
+            torch.load(f'{self.cfg.train.save_dir}/document_encoder.pt', map_location=device))

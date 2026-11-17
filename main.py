@@ -45,14 +45,25 @@ def main(cfg):
             loader = DataLoader(PairDataset(corpus.train), batch_size=cfg.train.batch_size,
                                 shuffle=True, drop_last=True)
             val_loader = DataLoader(PairDataset(corpus.val), batch_size=cfg.train.batch_size, drop_last=True)
+            best_val_loss, best_epoch = float('inf'), None
             for epoch in range(cfg.train.epochs):
                 train_loss = trainer.train_epoch(loader)
                 val_loss = trainer.eval_epoch(val_loader)
-                print(f'epoch {epoch}: train loss {train_loss:.4f} | val loss {val_loss:.4f}')
-            trainer.save()
+                improved = val_loss < best_val_loss
+                if improved:
+                    best_val_loss, best_epoch = val_loss, epoch
+                    trainer.save()
+                print(f'epoch {epoch}: train loss {train_loss:.4f} | val loss {val_loss:.4f}'
+                      + (' (saved)' if improved else ''))
+                patience = cfg.train.get('patience', 0)  # 0 disables early stopping
+                if patience and best_epoch is not None and epoch - best_epoch >= patience:
+                    print(f'Early stop: no val improvement for {patience} epochs')
+                    break
+            trainer.load()
+            print(f'Loaded best checkpoint: epoch {best_epoch}, val loss {best_val_loss:.4f}')
             retriever.query_encoder.eval()
             retriever.document_encoder.eval()
-            retriever.document_embedding = None  # stale after training; rebuilt on next lookup
+            retriever.document_embedding = None
     else:
         retriever = TFIDF(documents=corpus.all_documents)
 

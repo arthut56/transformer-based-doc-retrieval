@@ -8,7 +8,7 @@ defaults:
 device: auto
 base_path: "."
 top_k: 10
-do_train: false
+do_train: true
 
 # Keep Hydra in the current directory to ensure relative paths are correct
 hydra:
@@ -20,4 +20,5 @@ train:
   lr: 0.0003
   weight_decay: 0.01
   epochs: 30
+  patience: 5  # (0 = off)
   save_dir: outputs/dpr
