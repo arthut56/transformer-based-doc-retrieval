@@ -13,11 +13,15 @@ pip install -r requirements.txt
 ## Usage
 
 ```bash
-python main.py            # Run TF-IDF on FIQA
-python main.py top_k=20   # Override a config value
+python main.py retriever=tf_idf                 # TF-IDF on FiQA
+python main.py retriever=bm25                   # BM25 on FiQA
+python main.py retriever=dpr do_train=true      # train DPR encoders, then evaluate the best checkpoint
+python main.py retriever=bm25 dataset=squad     # SQuAD (no test split; train and val are evaluated)
+python main.py top_k=20                         # Override a config value
+python visualize_attention.py                   # attention maps, untrained vs trained, to outputs/attention/
 ```
 
-This prints recall@k for the train, validation and test splits. Settings are managed with Hydra in `config/`.
+This prints recall@k (capped at min(k, number relevant)), standard recall@k, precision@k and MRR@k for each split. Settings are managed with Hydra in `config/`.
 
 ## Structure
 

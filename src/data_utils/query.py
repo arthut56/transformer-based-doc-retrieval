@@ -16,3 +16,11 @@ class Query:
     
     def isDocumentRelevant(self, document: Document):
         return document.GetId() in self.relevant_document_ids
+
+
+def make_queries(corpus, split) -> list[Query]:
+    """Build Query objects for one dataset split (e.g. corpus.train)."""
+    return [Query(split['question'][i],
+                  id=split['query_id'][i],
+                  relevant_document_ids=corpus.relevant_ids[split['query_id'][i]])
+            for i in range(split.num_rows)]

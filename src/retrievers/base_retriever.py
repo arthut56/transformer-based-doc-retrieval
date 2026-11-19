@@ -41,13 +41,15 @@ class Retriever(ABC):
     def CalculateScores(self, query: str):
         raise NotImplementedError("Must overwrite")
     
-    def Lookup(self, queries: list[str], k: int) -> list:
+    def Lookup(self, queries: list[str], k: int, batch_size: int = 1024) -> list:
         """
         @param queries: The input text(s) to which relevant passages should be found.
         @param k: The number of relevant passages to retrieve for each input query.
         """
-        scores = torch.as_tensor(self.CalculateScores(queries))
-        k = min(k, scores.size(1))
-        top_idx = torch.topk(scores, k, dim=1).indices
         docs = self.index.GetDocuments()
-        return [[docs[j] for j in row] for row in top_idx.tolist()]
+        results = []
+        for i in range(0, len(queries), batch_size):
+            scores = torch.as_tensor(self.CalculateScores(queries[i:i + batch_size]))
+            top_idx = torch.topk(scores, min(k, scores.size(1)), dim=1).indices
+            results.extend([docs[j] for j in row] for row in top_idx.tolist())
+        return results

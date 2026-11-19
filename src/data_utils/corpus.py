@@ -38,19 +38,24 @@ class Corpus:
 
     @property
     def all_documents(self):
-        train_text, train_ids = list(self.train['text']), list(self.train['document_id'])
-        val_text, val_ids =     list(self.val['text']), list(self.val['document_id'])
-        
-        all_text = train_text + val_text
-        all_ids = train_ids   + val_ids
+        """
+        Every unique document across all splits. A document relevant to several queries
+        (e.g. a SQuAD context shared by ~5 questions) appears once.
+        """
+        all_text, all_ids, seen = [], [], set()
+        for split in (self.train, self.val, self.test):
+            if split is None:
+                continue
+            for texts, ids in zip(split['text'], split['document_id']):
+                for text, doc_id in zip(texts, ids):
+                    if doc_id not in seen:
+                        seen.add(doc_id)
+                        all_text.append(text)
+                        all_ids.append(doc_id)
 
-        if self.test is not None:
-            test_text, test_ids = list(self.test['text']), list(self.test['document_id'])
-            all_text += test_text
-            all_ids  += test_ids
-
-        return Dataset.from_dict({'text': all_text,
-                                  'document_id': all_ids})
+        # One document per row, each as a 1-element list (the row format DocumentDataset reads)
+        return Dataset.from_dict({'text': [[text] for text in all_text],
+                                  'document_id': [[doc_id] for doc_id in all_ids]})
 
 
     def __load_data(self, base_dir) -> dict[Dataset]:
@@ -70,32 +75,42 @@ class Corpus:
                          }
         
         for key in self.ds:
-            self.ds[key] = self.ds[key].rename_column(column_mapping[self.dataset_name], 'text')
+            if self.dataset_name == 'squad':
+                # SQuAD has one context string per question; wrap it in a list so 'text'
+                # always holds a list of relevant documents, as in FiQA.
+                self.ds[key] = self.ds[key].map(lambda row: {'text': [row['context']]},
+                                                remove_columns=['context'])
+            else:
+                self.ds[key] = self.ds[key].rename_column(column_mapping[self.dataset_name], 'text')
         return self.ds
 
     def __assign_ids(self):
+        """
+        Give each query a unique id and each unique document text one id. Identical texts
+        share an id, so a SQuAD context asked about by several questions is a single document
+        and retrieving it counts as a hit for all of them.
+        """
         q_id_counter = 0
-        doc_id_counter = 0
+        doc_text_to_id = {}
         relevant_document_ids = {}
 
         for key in self.ds:
             query_ids = []
             document_ids = []
-            for i in range(len(self.ds[key])):
+            for documents in self.ds[key]['text']:
                 query_ids.append(f'q{q_id_counter}')
-                documents = self.ds[key]['text'][i]
                 relevant_ids = []
                 for doc in documents:
-                    relevant_ids.append(f'doc{doc_id_counter}')
-                    doc_id_counter += 1
-                
+                    if doc not in doc_text_to_id:
+                        doc_text_to_id[doc] = f'doc{len(doc_text_to_id)}'
+                    relevant_ids.append(doc_text_to_id[doc])
+
                 document_ids.append(relevant_ids)
-                
+
                 relevant_document_ids[f'q{q_id_counter}'] = relevant_ids
                 q_id_counter += 1
-                
+
             self.ds[key] = self.ds[key].add_column('query_id', query_ids)
             self.ds[key] = self.ds[key].add_column('document_id', document_ids)
 
         return relevant_document_ids
-            
