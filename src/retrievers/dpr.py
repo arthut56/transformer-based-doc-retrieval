@@ -1,6 +1,7 @@
 from transformers import AutoTokenizer
 import torch
 from src.retrievers.models.encoder import TransformerEncoder
+from src.retrievers.models.pretrained_encoder import PretrainedEncoder
 from src.retrievers.base_retriever import Retriever
 from src.retrievers.utils import get_device
 
@@ -20,6 +21,12 @@ class DPR(Retriever):
         # n_heads, n_layers, emb_in, hidden_dim, feed_forward_dim
         m = self.cfg.model
         def build():
+            if m.get('type', 'scratch') == 'pretrained':
+                return PretrainedEncoder(model_name=m.pretrained_name,
+                                         pad_id=self.tokenizer.pad_token_id,
+                                         pooling_type=m.pooling_type,
+                                         hidden_dim=m.get('hidden_dim', None),
+                                         normalize=m.get('normalize', False))
             return TransformerEncoder(vocab_size=self.tokenizer.vocab_size,
                                       pad_id=self.tokenizer.pad_token_id,
                                       pooling_type=m.pooling_type,

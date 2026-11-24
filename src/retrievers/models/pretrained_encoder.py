@@ -4,10 +4,10 @@ import torch.nn as nn
 import torch.nn.functional as F
 from transformers import AutoModel
 
-
+#exact same interface as TransformerEncoder
 class PretrainedEncoder(nn.Module):
     def __init__(self, model_name: str, pad_id: int, pooling_type: str,
-                 hidden_dim: int = None, normalize: bool = False):
+            hidden_dim: int = None, normalize: bool = False):
         super().__init__()
         self.model = AutoModel.from_pretrained(model_name, attn_implementation='eager')
         self.pad_id = pad_id
