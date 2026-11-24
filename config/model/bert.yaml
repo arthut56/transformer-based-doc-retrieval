@@ -1,0 +1,7 @@
+type: pretrained  # fine-tune a pretrained encoder instead of training our TransformerEncoder from scratch
+pretrained_name: bert-base-uncased
+tokenizer: bert-base-uncased
+pooling_type: 'cls' # mean | cls | max
+hidden_dim: null  # null keeps BERT's 768 dimensions; a number adds a linear projection
+query_max_length: 64
+doc_max_length: 256
