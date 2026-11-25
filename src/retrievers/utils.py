@@ -1,11 +1,12 @@
 from src.retrievers.base_retriever import Retriever
 from src.data_utils.query import Query
 import torch
-def retrieveQueryAndGetRelevancies(model: Retriever, queries: list[Query], k: int):
+def retrieveQueryAndGetRelevancies(model: Retriever, queries: list[Query], k: int, return_documents: bool = False):
     """
     @param model: Retrieval model
     @param queries: A list of queries.
     @param k: Top-k relevant documents to consider.
+    @param return_documents: Also return the retrieved documents for each query.
 
     Returns a list of lists of booleans that are True when the retrieved document matches the ground truth of that query.
     """
@@ -20,6 +21,8 @@ def retrieveQueryAndGetRelevancies(model: Retriever, queries: list[Query], k: in
             else:
                 query_relevancies.append(False)
         relevancies.append(query_relevancies)
+    if return_documents:
+        return relevancies, retrieved_documents
     return relevancies
 
 def get_device():

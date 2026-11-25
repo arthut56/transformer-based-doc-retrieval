@@ -8,6 +8,7 @@ defaults:
 device: auto
 base_path: "."
 top_k: 10
+eval_ks: [1, 5, 10, 100]  # every cutoff P@k, R@k and MRR@k are reported at
 do_train: true
 
 # Keep Hydra in the current directory to ensure relative paths are correct

@@ -42,6 +42,47 @@ run_dpr() {
     done
 }
 
+# re-evaluate finished runs at k = 1, 5, 10, 100 without training (results go to <run>/rescore)
+rescore() {
+    local dir=$1; shift
+    if grep -q "Val results" "$dir/rescore/output.log" 2>/dev/null; then
+        echo "[skip, done] rescore $dir"
+        return
+    fi
+    mkdir -p "$dir/rescore"
+    echo "[rescore] $dir"
+    python main.py "$@" do_train=false '+eval_splits=[Val,Test]' hydra.run.dir="$dir/rescore" 2>&1 | tee "$dir/rescore/output.log"
+}
+
+# same overrides as the original training run, plus its saved weights
+rescore_trained() {
+    local dir=$1 args
+    mapfile -t args < <(sed -n 's/^- //p' "$dir/.hydra/overrides.yaml" | grep -vE '^(do_train|train\.save_dir|hydra\.)')
+    rescore "$dir" "${args[@]}" +model.query_encoder_weights_path="$dir/query_encoder.pt" \
+        +model.document_encoder_weights_path="$dir/document_encoder.pt"
+}
+
+if [ "$1" == "rescore" ]; then
+    rescore "$RESULTS/baselines/tf_idf_fiqa" retriever=tf_idf dataset=fiqa
+    rescore "$RESULTS/baselines/bm25_fiqa" retriever=bm25 dataset=fiqa
+    rescore "$RESULTS/baselines/tf_idf_squad" retriever=tf_idf dataset=squad
+    rescore "$RESULTS/baselines/bm25_squad" retriever=bm25 dataset=squad
+    rescore "$RESULTS/bert/no_finetune" retriever=dpr model=bert
+    for dir in "$RESULTS"/pooling/mean/rep* "$RESULTS"/tweaks/warmup_170/rep* "$RESULTS"/bert/*/rep* \
+            "$RESULTS"/squad/dpr_mean "$RESULTS"/squad/bert_cls; do
+        rescore_trained "$dir"
+    done
+
+    python error_analysis.py --a "$RESULTS/baselines/bm25_fiqa/rescore/per_query.json" --a_name BM25 \
+        --b "$RESULTS/bert/cls/rep1/rescore/per_query.json" --b_name BERT --out "$RESULTS/error_analysis_fiqa.md"
+    python error_analysis.py --dataset squad --split Val --a "$RESULTS/baselines/bm25_squad/rescore/per_query.json" \
+        --a_name BM25 --b "$RESULTS/squad/bert_cls/rescore/per_query.json" --b_name BERT --out "$RESULTS/error_analysis_squad.md"
+
+    grep -r --include=output.log -E "results(@[0-9]+)?:" "$RESULTS" | grep /rescore/ | sort > "$RESULTS/summary_rescore.txt"
+    echo "Done, you'll find a summary in $RESULTS/summary_rescore.txt"
+    exit
+fi
+
 run baselines/tf_idf_fiqa retriever=tf_idf dataset=fiqa
 run baselines/bm25_fiqa retriever=bm25 dataset=fiqa
 run baselines/tf_idf_squad retriever=tf_idf dataset=squad
@@ -82,5 +123,5 @@ if [ ! -f "$RESULTS/attention_bert/trained_query_heads.png" ]; then
         +attention.out_dir="$RESULTS/attention_bert" hydra.run.dir="$RESULTS/attention_bert" 2>&1 | tee "$RESULTS/attention_bert_output.log"
 fi
 
-grep -r --include=output.log -E "results:|Loaded best checkpoint" "$RESULTS" | sort > "$RESULTS/summary.txt"
+grep -r --include=output.log -E "results(@[0-9]+)?:|Loaded best checkpoint" "$RESULTS" | sort > "$RESULTS/summary.txt"
 echo "Done, you'll find a summary in $RESULTS/summary.txt"
